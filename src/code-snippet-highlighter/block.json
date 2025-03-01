@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "vexoniq-custom-blocks/code-snippet-highlighter",
+	"version": "0.1.0",
+	"title": "Code Snippet Highlighter",
+	"category": "widgets",
+	"icon": "", 
+	"description": "Example block scaffolded with Create Block tool.",
+	"example": {},
+	"supports": {
+		"html": false
+	},
+	"attributes": {
+		"text": {
+			"type": "string",
+			"default": "Code Snippet Here!"
+		},
+		"language": {
+            "type": "string",
+            "default": "text"
+        }
+	},
+	"textdomain": "vexoniq-custom-blocks",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css",
+	"render": "file:./render.php",
+	"viewScript": "file:./view.js"
+}
