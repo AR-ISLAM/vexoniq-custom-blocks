@@ -1,83 +1,87 @@
-// /**
-//  * Retrieves the translation of text.
-//  *
-//  * @see https://developer.wordpress.org/block-editor/reference-guides/packages/packages-i18n/
-//  */
-// import { __ } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
+import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
+import { TextareaControl, SelectControl, PanelBody } from '@wordpress/components';
+import { useState, useEffect } from '@wordpress/element';
+import Prism from 'prismjs';
+import components from 'prismjs/components'; // Import components.json directly
 
-// /**
-//  * React hook that is used to mark the block wrapper element.
-//  * It provides all the necessary props like the class name.
-//  *
-//  * @see https://developer.wordpress.org/block-editor/reference-guides/packages/packages-block-editor/#useblockprops
-//  */
-// import { useBlockProps, RichText } from '@wordpress/block-editor';
+// Import Prism.js CSS
+import 'prismjs/themes/prism-twilight.css';
+import './editor.scss';
 
-// /**
-//  * Lets webpack process CSS, SASS or SCSS files referenced in JavaScript files.
-//  * Those files can contain any CSS code that gets applied to the editor.
-//  *
-//  * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
-//  */
-// import './editor.scss';
-
-// /**
-//  * The edit function describes the structure of your block in the context of the
-//  * editor. This represents what the editor will render when the block is used.
-//  *
-//  * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-edit-save/#edit
-//  *
-//  * @return {Element} Element to render.
-//  */
-// export default function Edit({ attributes, setAttributes }) {
-// 	return (
-// 		<RichText
-// 			{ ...useBlockProps() }
-// 			tagName="p"
-// 			value={ attributes.content }
-// 			onChange={ (content) => setAttributes({ content }) }
-// 			placeholder="Enter text..."
-// 		/>
-// 	);
-// }
-
-
-import { useState } from '@wordpress/element';
-import { useBlockProps } from '@wordpress/block-editor';
-import { Button, TextControl } from '@wordpress/components';
-
-const Edit = ({ attributes, setAttributes }) => {
-	const { content, isEditing } = attributes;
-	const [text, setText] = useState(content);
-
-	const handleSave = () => {
-		setAttributes({ content: text, isEditing: false });
-	};
-
-	const handleEdit = () => {
-		setAttributes({ isEditing: true });
-	};
-
-	return (
-		<div {...useBlockProps()}>
-			{isEditing ? (
-				<div>
-					<TextControl
-						value={text}
-						onChange={(value) => setText(value)}
-						placeholder="Enter text here..."
-					/>
-					<Button variant="primary" onClick={handleSave}>
-						Save Text
-					</Button>
-				</div>
-			) : (
-				<p className="red-italic" onClick={handleEdit}>
-					{content}
-				</p>
-			)}
-		</div>
-	);
+// Extract language data from Prism.js components
+const getLanguages = () => {
+    const { languages } = components;
+    return Object.entries(languages)
+        .filter(([key]) => key !== 'meta') // Ignore meta section
+        .map(([key, value]) => ({
+            label: value.title || key, // Use title if available
+            value: key, // Actual language ID
+        }));
 };
 
-export default Edit;
+export default function Edit({ attributes, setAttributes }) {
+    const { text, language } = attributes;
+    const [isEditing, setIsEditing] = useState(!text);
+    const [languages, setLanguages] = useState([]);
+
+    // Load available languages on component mount
+    useEffect(() => {
+        setLanguages(getLanguages());
+    }, []);
+
+    // Highlight code whenever text or language changes
+    useEffect(() => {
+        if (language) {
+            import(`prismjs/components/prism-${language}`)
+                .then(() => Prism.highlightAll())
+                .catch(() => console.warn(`Prism.js: Language '${language}' not found.`));
+        }
+    }, [text, language]);
+
+    return (
+        <div {...useBlockProps()}>
+            {/* Sidebar Settings */}
+            <InspectorControls>
+                <PanelBody title={__('Code Language', 'vexoniq-custom-blocks')}>
+                    <SelectControl
+                        label={__('Select Language', 'vexoniq-custom-blocks')}
+                        value={language}
+                        options={languages.map(lang => ({
+                            label: lang.label,
+                            value: lang.value
+                        }))}
+                        onChange={(newLang) => setAttributes({ language: newLang })}
+                    />
+                </PanelBody>
+            </InspectorControls>
+
+            {/* Textarea for code input */}
+            {isEditing ? (
+                <div>
+                    <TextareaControl
+                        className="vexoniq-textarea"
+                        placeholder={__('Enter your code...', 'vexoniq-custom-blocks')}
+                        value={text}
+                        onChange={(newText) => setAttributes({ text: newText })}
+                    />
+                    <button 
+                        className="vexoniq-insert-button"
+                        onClick={() => setIsEditing(false)}
+                    >
+                        {__('Insert', 'vexoniq-custom-blocks')}
+                    </button>
+                </div>
+            ) : (
+                <pre className="vexoniq-code-container">
+                    <code 
+                        className={`language-${language}`}
+                        onClick={() => setIsEditing(true)}
+                    >
+                        {text || __('Click to edit...', 'vexoniq-custom-blocks')}
+                    </code>
+                </pre>
+            )}
+        </div>
+    );
+}
